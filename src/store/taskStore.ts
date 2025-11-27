@@ -29,7 +29,14 @@ interface TaskState {
   fetchTasks: (filters?: {
     status?: string;
     priority?: string;
-    date?: string;
+    search?: string;
+    fromDate?: string;
+    toDate?: string;
+    limit?: number | string;
+    offset?: number | string;
+    sortBy?: string;
+    sortOrder?: string;
+    append?: string;
   }) => Promise<void>;
   fetchTaskById: (id: number) => Promise<Task | null>;
   createTask: (
@@ -47,31 +54,48 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   loading: false,
 
   fetchTasks: async (filters = {}) => {
-  set({ loading: true });
-  try {
-    const token = useAuthStore.getState().token;
-    if (!token) return;
+    set({ loading: true });
+    try {
+      const token = useAuthStore.getState().token;
+      if (!token) {
+        set({ loading: false });
+        return;
+      }
 
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    const params = new URLSearchParams(filters);
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const params = new URLSearchParams(filters as any);
 
-    const res = await api.get(`/tasks?${params.toString()}`);
-    const payload = res.data.data || {};
+      const res = await api.get(`/tasks?${params.toString()}`);
+      const payload = res.data.data || {};
       const rows = payload.rows || [];
       const stats = payload.stats || { total: 0, completed: 0, pending: 0 };
 
-   set({
-        tasks: rows,
-        stats,
-        total: stats.total || 0,
-      });
+      // Only append when filters.append === "true"
+      const shouldAppend = String((filters as any).append) === "true";
 
-  } catch (err) {
-    toast.error("Failed to fetch tasks");
-  } finally {
-    set({ loading: false });
-  }
-},
+      if (shouldAppend) {
+        set((state) => {
+          const existingIds = new Set(state.tasks.map((t) => t.id));
+          const newRows = rows.filter((r: Task) => !existingIds.has(r.id));
+          return {
+            tasks: [...state.tasks, ...newRows],
+            stats,
+            total: stats.total || 0,
+          };
+        });
+      } else {
+        set({
+          tasks: rows,
+          stats,
+          total: stats.total || 0,
+        });
+      }
+    } catch (err) {
+      toast.error("Failed to fetch tasks");
+    } finally {
+      set({ loading: false });
+    }
+  },
 
   fetchTaskById: async (id) => {
     set({ loading: true });
@@ -95,11 +119,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       }));
 
       return task;
-
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to fetch task");
       return null;
-
     } finally {
       set({ loading: false });
     }

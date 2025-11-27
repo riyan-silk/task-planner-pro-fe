@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Sun, Moon, LogOut } from "lucide-react";
+import { Menu, Sun, Moon, LogOut, CircleCheckBig } from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 import useTheme from "../../hooks/useTheme";
-import logo from '/src/assets/task-planner-pro-logo.png';
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -32,12 +31,14 @@ const Header = () => {
 
             <Link
               to="/dashboard"
-              className="text-xl font-bold text-primary ml-3 tracking-wide flex items-center"
+              className="text-xl font-bold text-primary ml-3 tracking-wide flex items-center hover:text-green-400"
             >
-              <img src={logo} alt="Task Planner Pro Logo" className="mr-2 w-8 h-8" />
+              <CircleCheckBig size={32} strokeWidth={3} className="mx-2 text-green-400" />
               Task Planner Pro
             </Link>
           </div>
+
+          
 
           {user && (
             <div className="hidden md:flex items-center space-x-4">

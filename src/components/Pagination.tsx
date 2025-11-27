@@ -8,7 +8,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: Props) => {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-wrap justify-center space-x-2 mt-8">
+    <div className="flex flex-wrap justify-center space-x-2 py-8">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
