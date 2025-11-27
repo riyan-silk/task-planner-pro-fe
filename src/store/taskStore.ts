@@ -15,8 +15,15 @@ interface Task {
   updatedAt: string;
 }
 
+interface Stats {
+  total: number;
+  completed: number;
+  pending: number;
+}
+
 interface TaskState {
   tasks: Task[];
+  stats?: Stats;
   total: number;
   loading: boolean;
   fetchTasks: (filters?: {
@@ -35,6 +42,7 @@ interface TaskState {
 
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
+  stats: { total: 0, completed: 0, pending: 0 },
   total: 0,
   loading: false,
 
@@ -48,12 +56,15 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const params = new URLSearchParams(filters);
 
     const res = await api.get(`/tasks?${params.toString()}`);
-    console.log("Fetched -> ", res.data.data);
+    const payload = res.data.data || {};
+      const rows = payload.rows || [];
+      const stats = payload.stats || { total: 0, completed: 0, pending: 0 };
 
-    set({
-      tasks: res.data.data.rows,
-      total: res.data.data.total
-    });
+   set({
+        tasks: rows,
+        stats,
+        total: stats.total || 0,
+      });
 
   } catch (err) {
     toast.error("Failed to fetch tasks");

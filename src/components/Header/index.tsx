@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Menu, Sun, Moon, LogOut } from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 import useTheme from "../../hooks/useTheme";
+import logo from '/src/assets/task-planner-pro-logo.png';
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -18,9 +19,9 @@ const Header = () => {
   return (
     <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
+
         <div className="flex justify-between items-center py-4">
-          
+
           <div className="flex items-center">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -31,15 +32,16 @@ const Header = () => {
 
             <Link
               to="/dashboard"
-              className="text-xl font-bold text-primary ml-3 tracking-wide"
+              className="text-xl font-bold text-primary ml-3 tracking-wide flex items-center"
             >
+              <img src={logo} alt="Task Planner Pro Logo" className="mr-2 w-8 h-8" />
               Task Planner Pro
             </Link>
           </div>
 
           {user && (
             <div className="hidden md:flex items-center space-x-4">
-              
+
               <span className="hidden md:block text-muted-foreground">
                 Welcome, <span className="font-medium">{user.name}</span>
               </span>
