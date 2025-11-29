@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import useTasks from "../../hooks/useTasks";
 import Loader from "../../components/Loader";
-import TaskForm from "@/components/Form";
+import TaskForm from "../../components/Form";
 
 const TaskEdit = () => {
   const { id } = useParams<{ id: string }>();

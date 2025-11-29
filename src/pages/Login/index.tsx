@@ -1,20 +1,50 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
 
+  const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { login, register, isLoading } = useAuth();
   const navigate = useNavigate();
 
+  const validatePassword = (password: string) => {
+    const rules = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+
+    return Object.values(rules).every(Boolean);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLogin) {
+      if (!validatePassword(formData.password)) {
+        setPasswordError(
+          "Password must have 8+ chars, 1 uppercase, 1 lowercase, 1 number & 1 special symbol."
+        );
+        return;
+      }
+    }
+
+    setPasswordError("");
+
     try {
       if (isLogin) await login(formData.email, formData.password);
       else await register(formData.name, formData.email, formData.password);
+
       navigate("/dashboard");
     } catch {}
   };
@@ -34,14 +64,19 @@ const Login = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Full Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+                <User
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  size={20}
+                />
                 <input
                   type="text"
                   required
                   className="pl-10 w-full py-3 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                   placeholder="Enter your name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -50,31 +85,74 @@ const Login = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={20}
+              />
               <input
                 type="email"
                 required
                 className="pl-10 w-full py-3 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
                 placeholder="you@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
           </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+              <Lock
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={20}
+              />
+
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
-                className="pl-10 w-full py-3 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:outline-none"
+                className={`pl-10 pr-10 w-full py-3 border rounded-lg bg-background text-foreground focus:outline-none ${
+                  passwordError
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-input focus:ring-primary"
+                }`}
                 placeholder="Enter password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({ ...formData, password: val });
+
+                  if (!isLogin) {
+                    if (!validatePassword(val)) {
+                      setPasswordError(
+                        "Password must have 8+ chars, 1 uppercase, 1 lowercase, 1 number & 1 special symbol."
+                      );
+                    } else {
+                      setPasswordError("");
+                    }
+                  }
+                }}
               />
+
+              {showPassword ? (
+                <EyeOff
+                  size={20}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground"
+                  onClick={() => setShowPassword(false)}
+                />
+              ) : (
+                <Eye
+                  size={20}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground"
+                  onClick={() => setShowPassword(true)}
+                />
+              )}
             </div>
+
+            {passwordError && (
+              <p className="text-red-500 text-sm">{passwordError}</p>
+            )}
           </div>
 
           <button
@@ -87,7 +165,14 @@ const Login = () => {
 
           <p className="text-center text-sm text-muted-foreground">
             {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium hover:underline ml-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setPasswordError("");
+              }}
+              className="text-primary font-medium hover:underline ml-1"
+            >
               {isLogin ? "Sign up" : "Sign in"}
             </button>
           </p>

@@ -1,0 +1,49 @@
+{
+  "name": "Task Planner Pro",
+  "short_name": "TaskPlanner",
+  "description": "Task Planner Pro — Manage tasks, priorities, deadlines and productivity with ease.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#4ade80",
+  "orientation": "portrait-primary",
+
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-125x125.png",
+      "sizes": "125x125",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-150x150.png",
+      "sizes": "150x150",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-200x200.png",
+      "sizes": "200x200",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-400x400.png",
+      "sizes": "400x400",
+      "type": "image/png"
+    }
+  ]
+}
