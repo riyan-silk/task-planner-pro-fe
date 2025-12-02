@@ -9,7 +9,19 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import { useNavigate } from "react-router-dom";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "../../components/ui/alert-dialog";
+import { useState } from "react";
+import useTasks from "@/hooks/useTasks";
 
 interface Props {
   task: any;
@@ -18,6 +30,8 @@ interface Props {
 
 const TaskViewModal = ({ task, onClose }: Props) => {
   if (!task) return null;
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const { deleteTask } = useTasks();
 
   const navigate = useNavigate();
 
@@ -51,18 +65,29 @@ const TaskViewModal = ({ task, onClose }: Props) => {
     <Dialog open={!!task} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-screen my-2 overflow-y-auto p-6 rounded-xl border border-border bg-card shadow-xl">
         <DialogHeader className="flex align-center">
-          <DialogTitle className="text-3xl font-bold text-primary leading-tight">
-            {task.title}
-          </DialogTitle>
-          <button
-            onClick={() => {
-              navigate(`/tasks/${task.id}`);
-            }}
-            className="text-blue-500 hover:underline flex items-center gap-1"
-          >
-            <Pencil className="h-4 w-4" />
-            <span className="hidden md:inline">Edit</span>
-          </button>
+          <div className="flex align-center">
+            <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-primary leading-tight">
+              {task.title}
+            </DialogTitle>
+            <button
+              onClick={() => {
+                navigate(`/tasks/${task.id}`);
+              }}
+              className="text-blue-500 hover:underline flex items-center gap-1 mx-4"
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="hidden md:inline">Edit</span>
+            </button>
+            <button
+              onClick={() => {
+                setTaskToDelete(task);
+              }}
+              className="text-destructive hover:underline flex items-center gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden md:inline">Delete</span>
+            </button>
+          </div>
         </DialogHeader>
 
         <div className="mt-6 space-y-6">
@@ -281,6 +306,39 @@ const TaskViewModal = ({ task, onClose }: Props) => {
           </div>
         </div>
       </DialogContent>
+      <AlertDialog
+        open={!!taskToDelete}
+        onOpenChange={() => setTaskToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              task:
+              <br />
+              <span className="font-semibold text-foreground">
+                {taskToDelete?.title}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (taskToDelete) deleteTask(taskToDelete.id);
+                setTaskToDelete(null);
+                onClose();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

@@ -45,6 +45,8 @@ interface TaskState {
   updateTask: (id: number, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
   getTask: (id: number) => Task | undefined;
+  bulkDeleteTasks: (ids: number[]) => Promise<void>;
+  bulkUpdateTasks: (ids: number[], updates: Partial<Task>) => Promise<void>;
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -167,7 +169,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const token = useAuthStore.getState().token;
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      await api.delete(`/tasks/delete/${id}`);
+      await api.put(`/tasks/delete/${id}`);
       set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
       toast.success("Task deleted!");
     } catch (err: any) {
@@ -178,4 +180,62 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   getTask: (id) => get().tasks.find((t) => t.id === id),
+
+  bulkDeleteTasks: async (ids) => {
+    set({ loading: true });
+    try {
+      const token = useAuthStore.getState().token;
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      await api.put("/tasks/delete/bulk", { ids });
+
+      // remove locally
+      set((state) => ({
+        tasks: state.tasks.filter((t) => !ids.includes(t.id)),
+      }));
+      toast.success("Tasks deleted!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete tasks");
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  /* NEW: bulkUpdateTasks */
+  bulkUpdateTasks: async (ids, updates) => {
+    set({ loading: true });
+    try {
+      const token = useAuthStore.getState().token;
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      const res = await api.put("/tasks/edit/bulk", { ids, updates });
+
+      // If backend returns updated rows, use them to update local state
+      const updatedRows: Task[] = res.data?.data?.updated || [];
+
+      if (updatedRows && updatedRows.length > 0) {
+        set((state) => {
+          const updatedMap = new Map(updatedRows.map((r) => [r.id, r]));
+          return {
+            tasks: state.tasks.map((t) =>
+              updatedMap.has(t.id) ? updatedMap.get(t.id)! : t
+            ),
+          };
+        });
+      } else {
+        // fallback: optimistically update fields locally
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            ids.includes(t.id) ? { ...t, ...updates } : t
+          ),
+        }));
+      }
+
+      toast.success("Tasks updated!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update tasks");
+    } finally {
+      set({ loading: false });
+    }
+  },
 }));
