@@ -63,7 +63,7 @@ const TaskViewModal = ({ task, onClose }: Props) => {
 
   return (
     <Dialog open={!!task} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-screen my-2 overflow-y-auto p-6 rounded-xl border border-border bg-card shadow-xl">
+      <DialogContent className="w-[98%] md:w-[100%] max-h-screen my-2 overflow-y-auto p-6 rounded-xl border border-border bg-card shadow-xl">
         <DialogHeader className="flex align-center">
           <div className="flex align-center">
             <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-primary leading-tight">

@@ -24,7 +24,15 @@ import {
 } from "../../components/ui/alert-dialog";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
-import { Calendar, Loader2, Eye, Filter, Pencil, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Loader2,
+  Eye,
+  Filter,
+  Pencil,
+  Trash2,
+  Plus,
+} from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "../../components/ui/sheet";
 import {
@@ -386,30 +394,42 @@ const Dashboard = () => {
   return (
     <div className="px-2 md:px-6 max-w-7xl mx-auto pb-16">
       {user && (
-        <span className="block sm:hidden text-muted-foreground pt-2 pl-4">
+        <span className="block sm:hidden text-muted-foreground pt-2 pl-2 md:pl-4">
           Welcome, <span className="font-medium">{user.name}</span>
         </span>
       )}
 
       <div className="flex items-center justify-between my-4">
-        <h1 className="text-3xl font-bold text-primary mx-4">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-primary mx-1 md:mx-4">
+          Dashboard
+        </h1>
         <div>{isFetching ? <InlineSpinner /> : null}</div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 md:gap-6 mb-8">
         <div className="bg-card p-2 md:p-6 rounded-xl shadow border border-border">
-          <h3 className="text-muted-foreground">Total Tasks</h3>
-          <p className="text-4xl font-bold text-primary">
+          <h3 className="text-muted-foreground text-sm sm:text-lg md:text-xl">
+            Total Tasks
+          </h3>
+          <p className="text-3xl sm:text-4xl font-bold text-primary mt-2">
             {stats?.total ?? total ?? 0}
           </p>
         </div>
         <div className="bg-card p-2 md:p-6 rounded-xl shadow border border-border">
-          <h3 className="text-muted-foreground">Completed</h3>
-          <p className="text-4xl font-bold text-green-500">{completed}</p>
+          <h3 className="text-muted-foreground text-sm sm:text-lg md:text-xl">
+            Completed
+          </h3>
+          <p className="text-3xl sm:text-4xl font-bold text-green-500 mt-2">
+            {completed}
+          </p>
         </div>
         <div className="bg-card p-2 md:p-6 rounded-xl shadow border border-border">
-          <h3 className="text-muted-foreground">Pending</h3>
-          <p className="text-4xl font-bold text-destructive">{pending}</p>
+          <h3 className="text-muted-foreground text-sm sm:text-lg md:text-xl">
+            Pending
+          </h3>
+          <p className="text-3xl sm:text-4xl font-bold text-destructive mt-2">
+            {pending}
+          </p>
         </div>
       </div>
 
@@ -746,6 +766,7 @@ const Dashboard = () => {
                   type="checkbox"
                   checked={allSelectedOnPage}
                   onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                  className="w-3 h-3 md:w-4 md:h-4"
                 />
               </th>
               <th
@@ -806,6 +827,7 @@ const Dashboard = () => {
                       onChange={(e) =>
                         toggleSelectOne(Number(task.id), e.target.checked)
                       }
+                      className="w-3 h-3 md:w-4 md:h-4"
                     />
                   </td>
                   <td className="p-4 whitespace-nowrap">
@@ -930,9 +952,12 @@ const Dashboard = () => {
         onClick={() => navigate("/tasks/new")}
         className={`${
           selectedIds.length !== 0 ? "hidden" : ""
-        } bg-primary z-50 text-primary-foreground fixed bottom-6 right-6 px-6 py-3 rounded-full shadow-xl hover:bg-primary/80 transition`}
+        } bg-primary z-50 text-primary-foreground fixed bottom-6 right-6 px-4 py-4 md:py-3 rounded-full shadow-xl hover:bg-primary/80 transition flex align-center justify-center gap-x-1`}
       >
-        + New Task
+        <span className="flex justify-center items-center">
+          <Plus className="h-4 w-4" />
+        </span>
+        <span className="hidden md:inline">New Task</span>
       </button>
 
       {/* Single Delete Dialog */}
