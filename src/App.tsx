@@ -4,14 +4,20 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TaskEdit from "./pages/TaskEdit";
 import Header from "./components/Header";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 function App() {
   const { user, checkAuth } = useAuthStore();
 
   useEffect(() => {
-  checkAuth();
-}, []);
+    checkAuth();
+  }, []);
+
+  const PrivateRoute = (element: ReactNode) =>
+    user ? element : <Navigate to="/login" />;
+
+  const PublicRoute = (element: ReactNode) =>
+    !user ? element : <Navigate to="/dashboard" />;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -19,26 +25,12 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={
-            user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-          }
+          element={<Navigate to={user ? "/dashboard" : "/login"} />}
         />
-        <Route
-          path="/login"
-          element={!user ? <Login /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/dashboard"
-          element={user ? <Dashboard /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/tasks/new"
-          element={user ? <TaskEdit /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/tasks/:id"
-          element={user ? <TaskEdit /> : <Navigate to="/login" />}
-        />
+        <Route path="/login" element={PublicRoute(<Login />)} />
+        <Route path="/dashboard" element={PrivateRoute(<Dashboard />)} />
+        <Route path="/tasks/new" element={PrivateRoute(<TaskEdit />)} />
+        <Route path="/tasks/:id" element={PrivateRoute(<TaskEdit />)} />
       </Routes>
     </div>
   );

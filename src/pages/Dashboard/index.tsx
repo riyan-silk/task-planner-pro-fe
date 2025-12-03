@@ -951,7 +951,7 @@ const Dashboard = () => {
       <button
         onClick={() => navigate("/tasks/new")}
         className={`${
-          selectedIds.length !== 0 ? "hidden" : ""
+          selectedIds.length > 1 ? "hidden" : ""
         } bg-primary z-50 text-primary-foreground fixed bottom-6 right-6 px-4 py-4 md:py-3 rounded-full shadow-xl hover:bg-primary/80 transition flex align-center justify-center gap-x-1`}
       >
         <span className="flex justify-center items-center">
@@ -995,7 +995,7 @@ const Dashboard = () => {
       </AlertDialog>
 
       {/* Sticky Bulk Actions Bar */}
-      {selectedIds.length > 0 && (
+      {selectedIds.length > 1 && (
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3 z-40">
           <div className="text-sm text-muted-foreground">
             {selectedIds.length} task
