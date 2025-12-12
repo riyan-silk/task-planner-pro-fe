@@ -25,14 +25,13 @@ import {
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import {
-  Calendar,
-  Loader2,
-  Eye,
-  Filter,
-  Pencil,
-  Trash2,
-  Plus,
-} from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../components/ui/popover";
+import { Calendar } from "../../components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, Eye, Filter, Pencil, Trash2, Plus } from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 import { Sheet, SheetContent, SheetTrigger } from "../../components/ui/sheet";
 import {
@@ -41,6 +40,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import { cn } from "../../lib/utils";
+import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 const VALID_SORTS = ["title", "priority", "status", "dueDate", "createdAt"];
 
@@ -52,7 +54,6 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState<"pagination" | "infinite">(
     (searchParams.get("view") as any) || "pagination"
   );
-
   const {
     tasks,
     stats,
@@ -67,16 +68,17 @@ const Dashboard = () => {
   const observer = useRef<IntersectionObserver | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const lastTaskRef = useRef<HTMLTableRowElement | null>(null);
-
   const offsetVal = Number(searchParams.get("offset")) || 0;
-
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const filters = useMemo(
     () => ({
       status: searchParams.get("status") || undefined,
       priority: searchParams.get("priority") || undefined,
       search: searchParams.get("search") || undefined,
-      fromDate: searchParams.get("fromDate") || undefined,
-      toDate: searchParams.get("toDate") || undefined,
+      fromDate: dateRange?.from
+        ? format(dateRange.from, "yyyy-MM-dd")
+        : undefined,
+      toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
       sortBy: (searchParams.get("sortBy") as string) || "createdAt",
       sortOrder: (searchParams.get("sortOrder") as string) || "desc",
       limit:
@@ -84,22 +86,16 @@ const Dashboard = () => {
       offset: offsetVal,
       append: viewMode === "infinite" && offsetVal > 0 ? "true" : undefined,
     }),
-    [searchParams.toString(), viewMode, offsetVal]
+    [searchParams.toString(), viewMode, offsetVal, dateRange]
   );
-
   const [localFilters, setLocalFilters] = useState({
     search: searchParams.get("search") || "",
     status: searchParams.get("status") || "",
     priority: searchParams.get("priority") || "",
-    fromDate: searchParams.get("fromDate") || "",
-    toDate: searchParams.get("toDate") || "",
   });
 
-  const fromRef = useRef<HTMLInputElement | null>(null);
-  const toRef = useRef<HTMLInputElement | null>(null);
   const searchDebounceRef = useRef<number | null>(null);
   const dateRef = useRef<HTMLInputElement | null>(null);
-
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
@@ -113,7 +109,6 @@ const Dashboard = () => {
     dueDate: "",
   });
   const [bulkLoading, setBulkLoading] = useState(false);
-
   const fetchWithSpinner = async (f: any) => {
     try {
       setIsFetching(true);
@@ -122,10 +117,20 @@ const Dashboard = () => {
       setIsFetching(false);
     }
   };
-
+  useEffect(() => {
+    const fromDate = searchParams.get("fromDate");
+    const toDate = searchParams.get("toDate");
+    if (fromDate || toDate) {
+      setDateRange({
+        from: fromDate ? new Date(fromDate) : undefined,
+        to: toDate ? new Date(toDate) : undefined,
+      });
+    } else {
+      setDateRange(undefined);
+    }
+  }, [searchParams]);
   useEffect(() => {
     fetchWithSpinner(filters);
-    // clear selection when filters/view change
     setSelectedIds([]);
   }, [
     filters.limit,
@@ -139,7 +144,6 @@ const Dashboard = () => {
     filters.toDate,
     viewMode,
   ]);
-
   useEffect(() => {
     if (viewMode !== "infinite") {
       if (observer.current) {
@@ -148,7 +152,6 @@ const Dashboard = () => {
       }
       return;
     }
-
     const totalCount = stats?.total ?? total ?? 0;
     if (tasks.length === 0 || tasks.length >= totalCount) {
       if (observer.current) {
@@ -157,9 +160,7 @@ const Dashboard = () => {
       }
       return;
     }
-
     if (observer.current) observer.current.disconnect();
-
     observer.current = new IntersectionObserver(
       (entries) => {
         const ent = entries[0];
@@ -181,10 +182,8 @@ const Dashboard = () => {
         threshold: 0.1,
       }
     );
-
     const el = lastTaskRef.current;
     if (el) observer.current.observe(el);
-
     return () => {
       if (observer.current) {
         observer.current.disconnect();
@@ -192,7 +191,6 @@ const Dashboard = () => {
       }
     };
   }, [viewMode, tasks.length, loading, stats?.total, total, searchParams]);
-
   const setParams = (
     updater: (p: URLSearchParams) => URLSearchParams | void
   ) => {
@@ -202,7 +200,6 @@ const Dashboard = () => {
       return result;
     });
   };
-
   const applyImmediate = (key: string, value: string) => {
     setParams((p) => {
       if (!value || value === "all") p.delete(key);
@@ -211,7 +208,23 @@ const Dashboard = () => {
       return p;
     });
   };
-
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setDateRange(range);
+    setParams((p) => {
+      if (range?.from) {
+        p.set("fromDate", format(range.from, "yyyy-MM-dd"));
+      } else {
+        p.delete("fromDate");
+      }
+      if (range?.to) {
+        p.set("toDate", format(range.to, "yyyy-MM-dd"));
+      } else {
+        p.delete("toDate");
+      }
+      p.set("offset", "0");
+      return p;
+    });
+  };
   const handleSort = (field: string) => {
     if (!VALID_SORTS.includes(field)) return;
     setParams((p) => {
@@ -227,7 +240,6 @@ const Dashboard = () => {
       return p;
     });
   };
-
   const getSortIcon = (field: string) => {
     const sby = searchParams.get("sortBy") || "createdAt";
     const sorder = searchParams.get("sortOrder") || "desc";
@@ -244,7 +256,6 @@ const Dashboard = () => {
       </span>
     );
   };
-
   useEffect(() => {
     if (searchDebounceRef.current)
       window.clearTimeout(searchDebounceRef.current);
@@ -263,21 +274,18 @@ const Dashboard = () => {
         return p;
       });
     }, 500);
-
     return () => {
       if (searchDebounceRef.current)
         window.clearTimeout(searchDebounceRef.current);
     };
   }, [localFilters.search]);
-
   const handleClear = () => {
     setLocalFilters({
       search: "",
       status: "",
       priority: "",
-      fromDate: "",
-      toDate: "",
     });
+    setDateRange(undefined);
     setParams((p) => {
       p.delete("search");
       p.delete("status");
@@ -289,7 +297,6 @@ const Dashboard = () => {
     });
     setSelectedIds([]);
   };
-
   const handleViewModeChange = (mode: "pagination" | "infinite") => {
     setViewMode(mode);
     setParams((p) => {
@@ -298,7 +305,6 @@ const Dashboard = () => {
       return p;
     });
   };
-
   const selectValueOrAll = (v?: string) => (v && v !== "" ? v : "all");
   const completed = stats?.completed ?? 0;
   const pending = stats?.pending ?? (total || 0) - completed;
@@ -308,21 +314,17 @@ const Dashboard = () => {
     1,
     Math.ceil((stats?.total || total || 0) / pageSize)
   );
-
   const InlineSpinner = () => (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <Loader2 className="h-4 w-4 animate-spin" />
       <span>Updating…</span>
     </div>
   );
-
   const thStickyClass =
     "sticky top-0 z-20 bg-muted/95 dark:bg-card/95 backdrop-blur-sm";
-
   const allSelectedOnPage =
     tasks.length > 0 &&
     tasks.every((t: any) => selectedIds.includes(Number(t.id)));
-
   const toggleSelectAllOnPage = (checked: boolean) => {
     if (!checked) {
       setSelectedIds((prev) =>
@@ -333,7 +335,6 @@ const Dashboard = () => {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
     }
   };
-
   const toggleSelectOne = (id: number, checked: boolean) => {
     setSelectedIds((prev) => {
       if (checked) {
@@ -344,9 +345,6 @@ const Dashboard = () => {
       }
     });
   };
-
-  // ---- Bulk actions API calls ----
-
   const callBulkDelete = async () => {
     if (!selectedIds.length || !user) return;
     try {
@@ -361,20 +359,16 @@ const Dashboard = () => {
       setBulkLoading(false);
     }
   };
-
   const callBulkUpdate = async () => {
     if (!selectedIds.length || !user) return;
-
     const updates: any = {};
     if (bulkEditData.status) updates.status = bulkEditData.status;
     if (bulkEditData.priority) updates.priority = bulkEditData.priority;
     if (bulkEditData.dueDate) updates.dueDate = bulkEditData.dueDate;
-
     if (Object.keys(updates).length === 0) {
       setBulkEditOpen(false);
       return;
     }
-
     try {
       setBulkLoading(true);
       await bulkUpdateTasks(selectedIds, updates);
@@ -388,9 +382,7 @@ const Dashboard = () => {
       setBulkLoading(false);
     }
   };
-
   if (!tasks || loading === undefined) return <Loader />;
-
   return (
     <div className="px-2 md:px-6 max-w-7xl mx-auto pb-16">
       {user && (
@@ -398,14 +390,12 @@ const Dashboard = () => {
           Welcome, <span className="font-medium">{user.name}</span>
         </span>
       )}
-
       <div className="flex items-center justify-between my-4">
         <h1 className="text-3xl font-bold text-primary mx-1 md:mx-4">
           Dashboard
         </h1>
         <div>{isFetching ? <InlineSpinner /> : null}</div>
       </div>
-
       <div className="grid grid-cols-3 gap-2 md:gap-6 mb-8">
         <div className="bg-card p-2 md:p-6 rounded-xl shadow border border-border">
           <h3 className="text-muted-foreground text-sm sm:text-lg md:text-xl">
@@ -432,13 +422,10 @@ const Dashboard = () => {
           </p>
         </div>
       </div>
-
       <div className="hidden sm:flex items-center gap-2 mb-2 text-primary font-semibold">
         <Filter className="w-5 h-5" />
         <span>Filters</span>
       </div>
-
-      {/* Mobile Filters (Sheet) */}
       <div className="sm:hidden mb-4">
         <Sheet>
           <div className="flex w-full gap-3">
@@ -448,18 +435,15 @@ const Dashboard = () => {
                 Filters
               </Button>
             </SheetTrigger>
-
             <Button variant="outline" onClick={handleClear} className="flex-1">
               Clear Filters
             </Button>
           </div>
-
           <SheetContent side="bottom" className="h-[85vh] overflow-y-auto p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Filter className="w-5 h-5" />
               Filters
             </h2>
-
             <div className="space-y-4">
               <Input
                 value={localFilters.search}
@@ -472,7 +456,6 @@ const Dashboard = () => {
                 placeholder="Search tasks..."
                 className="bg-card border-border"
               />
-
               <Select
                 value={selectValueOrAll(localFilters.status)}
                 onValueChange={(v) => {
@@ -493,7 +476,6 @@ const Dashboard = () => {
                   ))}
                 </SelectContent>
               </Select>
-
               <Select
                 value={selectValueOrAll(localFilters.priority)}
                 onValueChange={(v) => {
@@ -517,57 +499,44 @@ const Dashboard = () => {
                   ))}
                 </SelectContent>
               </Select>
-
               <div className="space-y-3">
-                <div className="relative">
-                  <Input
-                    ref={fromRef}
-                    id="from-date"
-                    type="date"
-                    value={localFilters.fromDate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setLocalFilters((prev) => ({ ...prev, fromDate: val }));
-                      applyImmediate("fromDate", val);
-                    }}
-                    className="bg-card border-border pr-10"
-                    placeholder="From"
-                  />
-                  <Calendar
-                    onClick={() => {
-                      fromRef.current?.focus();
-                      if ((fromRef.current as any)?.showPicker)
-                        (fromRef.current as any).showPicker();
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground"
-                  />
-                </div>
-
-                <div className="relative">
-                  <Input
-                    ref={toRef}
-                    id="to-date"
-                    type="date"
-                    value={localFilters.toDate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setLocalFilters((prev) => ({ ...prev, toDate: val }));
-                      applyImmediate("toDate", val);
-                    }}
-                    className="bg-card border-border pr-10"
-                    placeholder="To"
-                  />
-                  <Calendar
-                    onClick={() => {
-                      toRef.current?.focus();
-                      if ((toRef.current as any)?.showPicker)
-                        (toRef.current as any).showPicker();
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground"
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date"
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateRange && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "LLL dd, y")} -{" "}
+                            {format(dateRange.to, "LLL dd, y")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "LLL dd, y")
+                        )
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={handleDateRangeChange}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-
               <Select
                 value={viewMode}
                 onValueChange={(v: any) => handleViewModeChange(v)}
@@ -580,7 +549,6 @@ const Dashboard = () => {
                   <SelectItem value="infinite">Infinite Scroll</SelectItem>
                 </SelectContent>
               </Select>
-
               <Button
                 variant="outline"
                 onClick={handleClear}
@@ -592,8 +560,6 @@ const Dashboard = () => {
           </SheetContent>
         </Sheet>
       </div>
-
-      {/* Desktop Filters */}
       <div className="hidden sm:flex flex-wrap gap-3 items-center mb-6">
         <div className="flex-1 min-w-[200px]">
           <Input
@@ -650,53 +616,42 @@ const Dashboard = () => {
           </Select>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <div className="relative">
-            <Input
-              ref={fromRef}
-              id="from-date"
-              type="date"
-              value={localFilters.fromDate}
-              onChange={(e) => {
-                const val = e.target.value;
-                setLocalFilters((prev) => ({ ...prev, fromDate: val }));
-                applyImmediate("fromDate", val);
-              }}
-              className="bg-card border-border pr-10"
-              placeholder="From"
-            />
-            <Calendar
-              onClick={() => {
-                fromRef.current?.focus();
-                if ((fromRef.current as any)?.showPicker)
-                  (fromRef.current as any).showPicker();
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground"
-            />
-          </div>
-
-          <div className="relative">
-            <Input
-              ref={toRef}
-              id="to-date"
-              type="date"
-              value={localFilters.toDate}
-              onChange={(e) => {
-                const val = e.target.value;
-                setLocalFilters((prev) => ({ ...prev, toDate: val }));
-                applyImmediate("toDate", val);
-              }}
-              className="bg-card border-border pr-10"
-              placeholder="To"
-            />
-            <Calendar
-              onClick={() => {
-                toRef.current?.focus();
-                if ((toRef.current as any)?.showPicker)
-                  (toRef.current as any).showPicker();
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground"
-            />
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-[280px] justify-start text-left font-normal",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={handleDateRangeChange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Select
@@ -724,10 +679,10 @@ const Dashboard = () => {
                 });
               }}
             >
-              <SelectTrigger className="bg-card w-32">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="min-w-max">
                 <SelectItem value="5">5</SelectItem>
                 <SelectItem value="10">10</SelectItem>
                 <SelectItem value="20">20</SelectItem>
@@ -747,7 +702,6 @@ const Dashboard = () => {
           </Button>
         </div>
       </div>
-
       <div className="relative overflow-x-auto rounded-xl shadow border border-border bg-card">
         {isFetching && viewMode === "infinite" && tasks.length > 0 && (
           <div className="absolute inset-0 z-30 flex items-start justify-center pointer-events-none">
@@ -759,16 +713,18 @@ const Dashboard = () => {
         <table className="min-w-full text-left">
           <thead>
             <tr>
-              <th
-                className={`${thStickyClass} p-4 font-semibold w-10 text-center`}
-              >
-                <input
-                  type="checkbox"
-                  checked={allSelectedOnPage}
-                  onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
-                  className="w-3 h-3 md:w-4 md:h-4"
-                />
-              </th>
+              {tasks.length > 1 && (
+                <th
+                  className={`${thStickyClass} p-4 font-semibold w-10 text-center`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={allSelectedOnPage}
+                    onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                    className="w-3 h-3 md:w-4 md:h-4"
+                  />
+                </th>
+              )}
               <th
                 className={`p-4 font-semibold cursor-pointer ${thStickyClass}`}
                 onClick={() => handleSort("title")}
@@ -819,17 +775,19 @@ const Dashboard = () => {
                   className="border-b border-border hover:bg-muted/50 transition"
                   onClick={() => setSelectedTask(task)}
                 >
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(Number(task.id))}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) =>
-                        toggleSelectOne(Number(task.id), e.target.checked)
-                      }
-                      className="w-3 h-3 md:w-4 md:h-4"
-                    />
-                  </td>
+                  {tasks.length > 1 && (
+                    <td className="p-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(Number(task.id))}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) =>
+                          toggleSelectOne(Number(task.id), e.target.checked)
+                        }
+                        className="w-3 h-3 md:w-4 md:h-4"
+                      />
+                    </td>
+                  )}
                   <td className="p-4 whitespace-nowrap">
                     <span className="hidden lg:inline">
                       {task.title.length > 40
@@ -879,7 +837,6 @@ const Dashboard = () => {
                           .replace(/,/g, "")
                       : "-"}
                   </td>
-
                   <td className="p-4 text-right space-x-3 flex items-center justify-end">
                     <button className="text-gray-500 hover:underline flex items-center gap-1">
                       <Eye className="h-4 w-4" />
@@ -926,7 +883,6 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-
       {viewMode === "pagination" && (
         <div className="mt-6">
           <Pagination
@@ -942,12 +898,10 @@ const Dashboard = () => {
           />
         </div>
       )}
-
       <TaskViewModal
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
       />
-
       <button
         onClick={() => navigate("/tasks/new")}
         className={`${
@@ -959,8 +913,6 @@ const Dashboard = () => {
         </span>
         <span className="hidden md:inline">New Task</span>
       </button>
-
-      {/* Single Delete Dialog */}
       <AlertDialog
         open={!!taskToDelete}
         onOpenChange={() => setTaskToDelete(null)}
@@ -977,10 +929,8 @@ const Dashboard = () => {
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -993,8 +943,6 @@ const Dashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Sticky Bulk Actions Bar */}
       {selectedIds.length > 1 && (
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3 z-40">
           <div className="text-sm text-muted-foreground">
@@ -1026,8 +974,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
-      {/* Bulk Delete Dialog */}
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1053,7 +999,6 @@ const Dashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
       <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1074,7 +1019,6 @@ const Dashboard = () => {
               </span>
               .
             </p>
-
             <div>
               <label className="block text-sm font-semibold mb-1">Status</label>
               <Select
@@ -1099,7 +1043,6 @@ const Dashboard = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <label className="block text-sm font-semibold mb-1">
                 Priority
@@ -1126,7 +1069,6 @@ const Dashboard = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="relative">
               <label className="block text-sm font-semibold mb-1">
                 Due Date
@@ -1140,7 +1082,7 @@ const Dashboard = () => {
                     dueDate: e.target.value,
                   }))
                 }
-                className="w-full border border-border p-3 rounded-md text-foreground pr-10
+                className="w-full border border-border p-3 rounded-md text-foreground pr-10 bg-primary-foreground
              [&::-webkit-calendar-picker-indicator]:opacity-0
              [&::-webkit-calendar-picker-indicator]:absolute
              [&::-webkit-calendar-picker-indicator]:right-0
@@ -1149,7 +1091,7 @@ const Dashboard = () => {
                 ref={dateRef}
                 min={new Date().toISOString().split("T")[0]}
               />
-              <Calendar
+              <CalendarIcon
                 onClick={() => {
                   dateRef.current?.focus();
                   if ((dateRef.current as any)?.showPicker)
@@ -1161,7 +1103,6 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground mt-1">
               Leave empty to keep existing due dates.
             </p>
-
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
@@ -1184,5 +1125,4 @@ const Dashboard = () => {
     </div>
   );
 };
-
 export default Dashboard;

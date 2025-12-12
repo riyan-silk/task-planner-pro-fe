@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Sun, Moon, LogOut, CircleCheckBig } from "lucide-react";
 import useAuth from "../../hooks/useAuth";
 import useTheme from "../../hooks/useTheme";
@@ -6,12 +6,6 @@ import useTheme from "../../hooks/useTheme";
 const Header = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
 
   return (
     <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
@@ -32,7 +26,10 @@ const Header = () => {
           {user && (
             <div className="flex items-center space-x-4">
               <span className="hidden sm:block text-muted-foreground">
-                Welcome, <span className="font-medium">{user.name}</span>
+                Welcome,{" "}
+                <Link to={"/profile"}>
+                  <span className="font-medium">{user.name}</span>
+                </Link>
               </span>
 
               <button
@@ -43,7 +40,7 @@ const Header = () => {
               </button>
 
               <button
-                onClick={handleLogout}
+                onClick={() => logout()}
                 className="hidden sm:flex px-4 py-2 rounded-lg bg-destructive text-white hover:bg-destructive/80 transition items-center gap-2"
               >
                 <LogOut size={18} />
@@ -51,7 +48,7 @@ const Header = () => {
               </button>
 
               <button
-                onClick={handleLogout}
+                onClick={() => logout()}
                 className="sm:hidden p-2 rounded-full bg-destructive text-white hover:bg-destructive/80 transition"
               >
                 <LogOut size={20} />

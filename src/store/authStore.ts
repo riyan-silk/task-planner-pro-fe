@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "../utils/api";
 import toast from "react-hot-toast";
+import type { AxiosResponse } from "axios";
 
 interface User {
   id: number;
@@ -14,8 +15,15 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<AxiosResponse | undefined>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<AxiosResponse | undefined>;
   logout: () => void;
   checkAuth: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -41,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
           set({ user, token: accessToken, refreshToken });
 
           toast.success("Login successful!");
+          return res;
         } catch (err: any) {
           toast.error(err.response?.data?.message || "Login failed");
         } finally {
@@ -65,6 +74,7 @@ export const useAuthStore = create<AuthState>()(
           set({ user, token: accessToken, refreshToken });
 
           toast.success("Account created!");
+          return res;
         } catch (err: any) {
           toast.error(err.response?.data?.message || "Registration failed");
         } finally {
@@ -72,7 +82,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: async () => {
+        const token = get().token;
+
+        if (token) {
+          await api.post("/auth/logout", { token });
+        }
+
         set({ user: null, token: null, refreshToken: null });
         toast.success("Logged out");
       },

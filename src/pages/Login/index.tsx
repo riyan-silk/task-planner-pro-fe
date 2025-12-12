@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 
@@ -15,6 +15,10 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, register, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const redirectPath =
+    new URLSearchParams(location.search).get("redirect") || "/dashboard";
 
   const validatePassword = (password: string) => {
     const rules = {
@@ -30,22 +34,26 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLogin) {
-      if (!validatePassword(formData.password)) {
-        setPasswordError(
-          "Password must have 8+ chars, 1 uppercase, 1 lowercase, 1 number & 1 special symbol."
-        );
-        return;
-      }
+
+    if (!isLogin && !validatePassword(formData.password)) {
+      setPasswordError(
+        "Password must have 8+ chars, 1 uppercase, 1 lowercase, 1 number & 1 special symbol."
+      );
+      return;
     }
 
     setPasswordError("");
 
     try {
-      if (isLogin) await login(formData.email, formData.password);
-      else await register(formData.name, formData.email, formData.password);
+      let res: any;
 
-      navigate("/dashboard");
+      if (isLogin) {
+        res = await login(formData.email, formData.password);
+      } else {
+        res = await register(formData.name, formData.email, formData.password);
+      }
+
+      if (res?.status === 200) navigate(redirectPath);
     } catch {}
   };
 
