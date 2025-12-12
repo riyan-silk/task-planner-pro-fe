@@ -6,6 +6,10 @@ import "./assets/styles/globals.css";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js");
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>

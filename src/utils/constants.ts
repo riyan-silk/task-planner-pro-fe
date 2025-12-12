@@ -29,3 +29,8 @@ export const STATUS_OPTIONS = [
   { value: "in-progress", label: "In Progress" },
   { value: "done", label: "Done" },
 ];
+
+export const WEB_PUSH = {
+  public_key:
+    "BArkN-TwEf7ur5hSdkYNt9MbUy85l42jy2E9Xmd-XGjw1NpWfgtvfaooOD49vSyKtBEnTsv0-O5VJ9-ntXCCM6w",
+};
