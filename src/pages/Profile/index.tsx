@@ -1,12 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../utils/api";
 import { User, Mail, Lock, Eye, EyeOff, Bell, BellOff } from "lucide-react";
 import toast from "react-hot-toast";
-import { WEB_PUSH } from "@/utils/constants";
+import useProfile from "@/hooks/useProfile";
 
 export default function Profile() {
   const { user, token, refresh } = useAuthStore();
+
+  const {
+    notificationsEnabled,
+    checkingSubscription,
+    checkSubscription,
+    enableNotifications,
+    disableNotifications,
+  } = useProfile();
+
+  const firstRender = useRef(true);
 
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -28,9 +38,23 @@ export default function Profile() {
     new: false,
   });
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
 
+    console.log("Token --> ", token);
+    if (!token) return;
+
+    const timer = setTimeout(() => {
+      checkSubscription();
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [token]);
+
+  // Validation functions
   const validateEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -45,73 +69,6 @@ export default function Profile() {
     return Object.values(rules).every(Boolean);
   };
 
-  useEffect(() => {
-    if (!token) return;
-
-    async function check() {
-      try {
-        const res = await api.post("/push/check-subscription", { token });
-        setNotificationsEnabled(res.data?.enabled === true);
-      } catch {
-        setNotificationsEnabled(false);
-      }
-      setCheckingSubscription(false);
-    }
-
-    check();
-  }, [token]);
-
-  const enableNotifications = async () => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-      toast.error("Notifications are not supported on this browser.");
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-
-    if (permission !== "granted") {
-      toast.error("You must allow notifications.");
-      return;
-    }
-
-    try {
-      const reg = await navigator.serviceWorker.ready;
-
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: WEB_PUSH.public_key,
-      });
-
-      console.log("SUBSCRIBED:", subscription);
-
-      await api.post("/push/subscribe", { token, subscription });
-
-      setNotificationsEnabled(true);
-      toast.success("Notifications enabled!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to enable notifications.");
-    }
-  };
-
-  const disableNotifications = async () => {
-    try {
-      // unsubscribe locally
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) await sub.unsubscribe();
-
-      // remove on backend
-      await api.post("/push/unsubscribe", { token });
-
-      setNotificationsEnabled(false);
-      toast.success("Notifications disabled!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to disable notifications.");
-    }
-  };
-
   const updateProfile = async () => {
     if (!validateEmail(form.email)) {
       setErrors((e) => ({ ...e, email: "Enter a valid email address." }));
@@ -120,15 +77,12 @@ export default function Profile() {
 
     try {
       const res = await api.put("/user/profile/update", {
-        token,
         ...form,
       });
 
       if (res.status === 200) {
         toast.success("Profile updated!");
         refresh();
-      } else {
-        toast.error(res.data?.msg || "Something went wrong!");
       }
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Update failed");
@@ -141,7 +95,7 @@ export default function Profile() {
     if (passwords.oldPassword === passwords.newPassword) {
       setErrors((e) => ({
         ...e,
-        newPassword: "New password cannot be same as old password.",
+        newPassword: "New password cannot be the same as old password.",
       }));
       return;
     }
@@ -157,15 +111,12 @@ export default function Profile() {
 
     try {
       const res = await api.put("/user/profile/password", {
-        token,
         ...passwords,
       });
 
       if (res.status === 200) {
         toast.success("Password updated!");
         setPasswords({ oldPassword: "", newPassword: "" });
-      } else {
-        toast.error(res.data?.msg || "Something went wrong!");
       }
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Password update failed");
@@ -173,49 +124,39 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-xl bg-card border border-border rounded-2xl shadow p-8 space-y-10">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 md:p-6">
+      <div className="w-full max-w-xl bg-card border border-border rounded-2xl shadow p-4 md:p-8 space-y-10">
         <h2 className="text-3xl font-bold text-primary text-center">
           Your Profile
         </h2>
 
         <div className="space-y-6">
           <h3 className="text-lg font-semibold">Profile Details</h3>
-
           <div className="space-y-3">
             <label className="text-sm font-medium">Full Name</label>
             <div className="relative">
-              <User
-                size={20}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
-                className="w-full pl-10 py-3 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                className="w-full pl-10 py-3 border rounded-lg bg-background focus:ring-primary"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
           </div>
-
           <div className="space-y-3">
             <label className="text-sm font-medium">Email</label>
             <div className="relative">
-              <Mail
-                size={20}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
-
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
-                className={`w-full pl-10 py-3 border rounded-lg bg-background focus:outline-none ${
-                  errors.email
-                    ? "border-red-500 focus:ring-red-500"
-                    : "border-input focus:ring-primary"
+                className={`w-full pl-10 py-3 border rounded-lg bg-background ${
+                  errors.email ? "border-red-500" : "border-input"
                 }`}
                 value={form.email}
                 onChange={(e) => {
-                  setForm({ ...form, email: e.target.value });
+                  const val = e.target.value;
+                  setForm({ ...form, email: val });
 
-                  if (!validateEmail(e.target.value)) {
+                  if (!validateEmail(val)) {
                     setErrors((err) => ({
                       ...err,
                       email: "Enter a valid email address.",
@@ -226,7 +167,6 @@ export default function Profile() {
                 }}
               />
             </div>
-
             {errors.email && (
               <p className="text-red-500 text-sm">{errors.email}</p>
             )}
@@ -248,9 +188,9 @@ export default function Profile() {
           <div className="flex items-center justify-between p-3 border rounded-lg bg-muted">
             <div className="flex items-center gap-3">
               {notificationsEnabled ? (
-                <Bell className="text-green-500" size={22} />
+                <Bell className="text-green-500" />
               ) : (
-                <BellOff className="text-red-500" size={22} />
+                <BellOff className="text-red-500" />
               )}
               <span className="text-sm font-medium">
                 {notificationsEnabled ? "Enabled" : "Disabled"}
@@ -278,16 +218,14 @@ export default function Profile() {
 
         <div className="space-y-6 pt-4 border-t border-border">
           <h3 className="text-lg font-semibold">Change Password</h3>
+
           <div className="space-y-3">
             <label className="text-sm font-medium">Old Password</label>
             <div className="relative">
-              <Lock
-                size={20}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type={showPassword.old ? "text" : "password"}
-                className="w-full pl-10 pr-10 py-3 border rounded-lg bg-background focus:ring-2 focus:ring-primary"
+                className="w-full pl-10 pr-10 py-3 border rounded-lg bg-background focus:ring-primary"
                 value={passwords.oldPassword}
                 onChange={(e) =>
                   setPasswords({ ...passwords, oldPassword: e.target.value })
@@ -296,18 +234,16 @@ export default function Profile() {
 
               {showPassword.old ? (
                 <EyeOff
-                  size={20}
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
                   onClick={() =>
-                    setShowPassword({ ...showPassword, old: false })
+                    setShowPassword((prev) => ({ ...prev, old: false }))
                   }
                 />
               ) : (
                 <Eye
-                  size={20}
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
                   onClick={() =>
-                    setShowPassword({ ...showPassword, old: true })
+                    setShowPassword((prev) => ({ ...prev, old: true }))
                   }
                 />
               )}
@@ -317,16 +253,11 @@ export default function Profile() {
           <div className="space-y-3">
             <label className="text-sm font-medium">New Password</label>
             <div className="relative">
-              <Lock
-                size={20}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type={showPassword.new ? "text" : "password"}
-                className={`w-full pl-10 pr-10 py-3 border rounded-lg bg-background focus:outline-none ${
-                  errors.newPassword
-                    ? "border-red-500 focus:ring-red-500"
-                    : "border-input focus:ring-primary"
+                className={`w-full pl-10 pr-10 py-3 border rounded-lg bg-background ${
+                  errors.newPassword ? "border-red-500" : "border-input"
                 }`}
                 value={passwords.newPassword}
                 onChange={(e) => {
@@ -347,18 +278,16 @@ export default function Profile() {
 
               {showPassword.new ? (
                 <EyeOff
-                  size={20}
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
                   onClick={() =>
-                    setShowPassword({ ...showPassword, new: false })
+                    setShowPassword((prev) => ({ ...prev, new: false }))
                   }
                 />
               ) : (
                 <Eye
-                  size={20}
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
                   onClick={() =>
-                    setShowPassword({ ...showPassword, new: true })
+                    setShowPassword((prev) => ({ ...prev, new: true }))
                   }
                 />
               )}
