@@ -532,7 +532,7 @@ const Dashboard = () => {
                       defaultMonth={dateRange?.from}
                       selected={dateRange}
                       onSelect={handleDateRangeChange}
-                      numberOfMonths={2}
+                      numberOfMonths={1}
                     />
                   </PopoverContent>
                 </Popover>
@@ -648,7 +648,7 @@ const Dashboard = () => {
                 defaultMonth={dateRange?.from}
                 selected={dateRange}
                 onSelect={handleDateRangeChange}
-                numberOfMonths={2}
+                numberOfMonths={1}
               />
             </PopoverContent>
           </Popover>

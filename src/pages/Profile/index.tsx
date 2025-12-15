@@ -44,7 +44,6 @@ export default function Profile() {
       return;
     }
 
-    console.log("Token --> ", token);
     if (!token) return;
 
     const timer = setTimeout(() => {
