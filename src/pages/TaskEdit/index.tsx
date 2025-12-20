@@ -1,8 +1,10 @@
+// src/pages/TaskEdit/index.tsx (Updated: Added team, assignee, visibility, dueTime, tags, comments, attachments sections)
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import useTasks from "../../hooks/useTasks";
 import Loader from "../../components/Loader";
 import TaskForm from "../../components/Form";
+import TaskSubSections from "../../components/TaskSubSections"; // New component for sub-sections
 
 const TaskEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +40,7 @@ const TaskEdit = () => {
 
   return (
     <div className="min-h-screen bg-background py-12">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-primary">
             {isEdit ? "Edit Task" : "New Task"}
@@ -51,6 +53,7 @@ const TaskEdit = () => {
           </button>
         </div>
         <TaskForm initialData={initialData} onSubmit={handleSubmit} />
+        {isEdit && <TaskSubSections taskId={Number(id)} />}
       </div>
     </div>
   );

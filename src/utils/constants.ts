@@ -34,3 +34,14 @@ export const WEB_PUSH = {
   public_key:
     "BArkN-TwEf7ur5hSdkYNt9MbUy85l42jy2E9Xmd-XGjw1NpWfgtvfaooOD49vSyKtBEnTsv0-O5VJ9-ntXCCM6w",
 };
+
+export const VISIBILITY_OPTIONS = [
+  { value: "private", label: "Private" },
+  { value: "team", label: "Team" },
+  { value: "public", label: "Public" },
+];
+export const JOIN_TYPE_OPTIONS = [
+  { value: "auto", label: "Auto Join" },
+  { value: "approval", label: "Approval Required" },
+  { value: "invite", label: "Invite Only" },
+];
